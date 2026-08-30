@@ -1,0 +1,141 @@
+const cron = require('node-cron');
+const logger = require('./utils/log');
+const axios = require("axios");
+const fs = require('fs-extra');
+const PREFIX = true;
+
+module.exports = async ({ api }) => {
+  const config = {
+    autoRestart: {
+      status: false,
+      time: 40,
+      note: 'To avoid problems, enable periodic bot restarts',
+    },
+    greetings: [
+      {
+        cronTime: '0 5 * * *',
+        messages: [`Good morning! Have a great day ahead!`],
+      },
+      {
+        cronTime: '0 8 * * *',
+        messages: [`Hello Everyone Time Check 8:00 AM :>`],
+      },
+      {
+        cronTime: '0 10 * * *',
+        messages: [`Hello everyone! How's your day going?`],
+      },
+      {
+        cronTime: '0 12 * * *',
+        messages: [`Lunchtime reminder: Take a break and eat well!`],
+      },
+      {
+        cronTime: '0 14 * * *',
+        messages: [`Reminder: Don't forget your tasks for today!`],
+      },
+      {
+        cronTime: '0 18 * * *',
+        messages: [`Good evening! Relax and enjoy your evening.`],
+      },
+      {
+        cronTime: '0 20 * * *',
+        messages: [`Time to wind down. Have a peaceful evening.`],
+      },
+      {
+        cronTime: '0 22 * * *',
+        messages: [`Good night! Have a restful sleep.`],
+      }
+    ]
+  };
+
+  function calculateCountdown() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const christmas = new Date(currentYear, 11, 25);
+    const newYear = new Date(currentYear + 1, 0, 1);
+    
+    if (now > christmas) {
+      const timeDiff = newYear - now;
+      const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      return `🎉 𝗡𝗲𝘄 𝗬𝗲𝗮𝗿 𝗖𝗼𝘂𝗻𝘁𝗱𝗼𝘄𝗻\n━━━━━━━━━━━━━━━━━━\n${days} days until New Year ${currentYear + 1}!`;
+    } else {
+      const timeDiff = christmas - now;
+      const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      return `🎄 𝗖𝗵𝗿𝗶𝘀𝘁𝗺𝗮𝘀 𝗖𝗼𝘂𝗻𝘁𝗱𝗼𝘄𝗻\n━━━━━━━━━━━━━━━━━━\n${days} days until Christmas!`;
+    }
+  }
+
+  cron.schedule('0 7 * * *', () => {
+    const countdownMessage = calculateCountdown();
+    api.getThreadList(20, null, ['INBOX']).then((list) => {
+      list.forEach((thread) => {
+        if (thread.isGroup) {
+          api.sendMessage(`🌅 𝗠𝗼𝗿𝗻𝗶𝗻𝗴 𝗨𝗽𝗱𝗮𝘁𝗲\n━━━━━━━━━━━━━━━━━━\n${countdownMessage}`, thread.threadID).catch((error) => {
+            console.log(`Error sending morning countdown: ${error}`, 'Countdown');
+          });
+        }
+      });
+    }).catch((error) => {
+      console.log(`Error getting thread list: ${error}`, 'Countdown');
+    });
+  }, {
+    scheduled: true,
+    timezone: "Asia/Manila"
+  });
+
+  cron.schedule('0 18 * * *', () => {
+    const countdownMessage = calculateCountdown();
+    api.getThreadList(20, null, ['INBOX']).then((list) => {
+      list.forEach((thread) => {
+        if (thread.isGroup) {
+          api.sendMessage(`🌆 𝗘𝘃𝗲𝗻𝗶𝗻𝗴 𝗨𝗽𝗱𝗮𝘁𝗲\n━━━━━━━━━━━━━━━━━━\n${countdownMessage}`, thread.threadID).catch((error) => {
+            console.log(`Error sending evening countdown: ${error}`, 'Countdown');
+          });
+        }
+      });
+    }).catch((error) => {
+      console.log(`Error getting thread list: ${error}`, 'Countdown');
+    });
+  }, {
+    scheduled: true,
+    timezone: "Asia/Manila"
+  });
+
+  config.greetings.forEach((greeting) => {
+    cron.schedule(greeting.cronTime, () => {
+      api.getThreadList(20, null, ['INBOX']).then((list) => {
+        list.forEach((thread) => {
+          if (thread.isGroup) {
+            api.sendMessage(greeting.messages[0], thread.threadID).catch((error) => {
+              console.log(`Error sending message: ${error}`, 'AutoGreet');
+            });
+          }
+        });
+      }).catch((error) => {
+        console.log(`Error getting thread list: ${error}`, 'AutoGreet');
+      });
+    }, {
+      scheduled: true,
+      timezone: "Asia/Manila"
+    });
+  });
+
+  if (config.autoRestart.status) {
+    cron.schedule(`*/${config.autoRestart.time} * * * *`, () => {
+      api.getThreadList(20, null, ['INBOX']).then((list) => {
+        list.forEach((thread) => {
+          if (thread.isGroup) {
+            api.sendMessage("🔃 𝗥𝗲𝘀𝘁𝗮𝗿𝘁𝗶𝗻𝗴 𝗣𝗿𝗼𝗰𝗲𝘀𝘀\n━━━━━━━━━━━━━━━━━━\nBot is restarting...", thread.threadID).then(() => {
+              console.log(`Restart message sent to thread`, 'Auto Restart');
+            }).catch((error) => {
+              console.log(`Error sending restart message to thread ${error}`, 'Auto Restart');
+            });
+          }
+        });
+        console.log('Start rebooting the system!', 'Auto Restart');
+        process.exit(1);
+      }).catch((error) => {
+        console.log(`Error getting thread list for restart: ${error}`, 'Auto Restart');
+      });
+    });
+  }
+};

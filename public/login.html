@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZACH_CORE | Authentication</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .glass { background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        input:focus { box-shadow: 0 0 15px rgba(99, 102, 241, 0.3); }
+    </style>
+</head>
+<body class="bg-[#0b0e14] text-gray-300 min-h-screen flex items-center justify-center p-6 overflow-hidden">
+
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="w-full max-w-md animate-in fade-in zoom-in duration-500">
+        <div class="text-center mb-8">
+            <div class="inline-block w-16 h-16 bg-indigo-600 rounded-2xl mb-4 shadow-2xl shadow-indigo-500/20 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <h1 class="text-3xl font-black text-white italic tracking-tighter uppercase">Zach_Core</h1>
+            <p class="text-[10px] text-gray-500 tracking-[0.4em] uppercase mt-2">Central Command Access</p>
+        </div>
+
+        <div class="glass p-8 rounded-[2.5rem] shadow-2xl">
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Identity</label>
+                    <input type="text" id="username" required 
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded-2xl px-5 py-4 text-white outline-none transition-all focus:border-indigo-500" 
+                        placeholder="Username">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Access_Key</label>
+                    <input type="password" id="pass" required 
+                        class="w-full bg-[#0d1117] border border-[#30363d] rounded-2xl px-5 py-4 text-white outline-none transition-all focus:border-indigo-500" 
+                        placeholder="••••••••">
+                </div>
+
+                <div id="error-msg" class="text-red-500 text-[10px] font-bold uppercase text-center hidden animate-pulse">
+                    Access Denied: Invalid Credentials
+                </div>
+
+                <button type="submit" 
+                    class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs tracking-widest py-5 rounded-2xl transition-all shadow-lg shadow-indigo-900/40 active:scale-[0.98]">
+                    AUTHORIZE_SESSION
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center mt-8 text-[9px] text-gray-600 uppercase tracking-widest font-mono">
+            Secure Encrypted Tunnel: v3.0.1
+        </p>
+    </div>
+
+    <script>
+        // Particle background logic
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function initParticles() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            particles = [];
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1, speedX: (Math.random() - 0.5) * 0.3,
+                    speedY: (Math.random() - 0.5) * 0.3, opacity: Math.random() * 0.4
+                });
+            }
+        }
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.x += p.speedX; p.y += p.speedY;
+                if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+                ctx.fillStyle = `rgba(99, 102, 241, ${p.opacity})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+        window.addEventListener('resize', initParticles);
+        initParticles(); animate();
+
+        // Login Logic
+        const form = document.getElementById('login-form');
+        const errorMsg = document.getElementById('error-msg');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.classList.add('hidden');
+            
+            const username = document.getElementById('username').value;
+            const pass = document.getElementById('pass').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, pass })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (err) {
+                alert("Server Connection Error");
+            }
+        });
+    </script>
+</body>
+</html>
